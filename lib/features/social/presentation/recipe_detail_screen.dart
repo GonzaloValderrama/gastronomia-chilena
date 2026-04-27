@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../../recipes/domain/recipe.dart';
+import 'social_provider.dart';
 
-class RecipeDetailScreen extends StatefulWidget {
+class RecipeDetailScreen extends ConsumerStatefulWidget {
   final Recipe recipe;
   const RecipeDetailScreen({super.key, required this.recipe});
 
   @override
-  State<RecipeDetailScreen> createState() => _RecipeDetailScreenState();
+  ConsumerState<RecipeDetailScreen> createState() => _RecipeDetailScreenState();
 }
 
-class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
+class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
   final _commentController = TextEditingController();
-  int _currentRating = 0;
   
   late FlutterTts _flutterTts;
   bool _isPlayingTts = false;
+  bool _isSubmittingComment = false;
 
   @override
   void initState() {
@@ -53,7 +55,6 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
       
       final recipe = widget.recipe;
       
-      // Armar el texto completo para leer
       StringBuffer ttsText = StringBuffer();
       ttsText.writeln("Receta de ${recipe.title}.");
       if (recipe.description != null) {
@@ -83,17 +84,18 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   }
 
   // ==== REPORTAR ====
-  void _reportContent(String type) {
+  void _reportContent(String type, String entityId) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         title: Text('Reportar $type'),
-        content: const Text('¿Estás seguro de que deseas reportar este contenido? A los 3 reportes será ocultado para revisión.'),
+        content: const Text('¿Estás seguro de que deseas reportar este contenido?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
             onPressed: () {
+              // TODO: Insertar reporte en la base de datos
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Reporte enviado exitosamente.')),
@@ -106,10 +108,62 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     );
   }
 
+  // ==== ENVIAR COMENTARIO ====
+  Future<void> _submitComment() async {
+    final text = _commentController.text.trim();
+    if (text.isEmpty) return;
+
+    setState(() => _isSubmittingComment = true);
+
+    try {
+      await ref.read(socialRepositoryProvider).addComment(widget.recipe.id, text);
+      _commentController.clear();
+      // Refrescar los comentarios
+      ref.refresh(recipeCommentsProvider(widget.recipe.id));
+      if (mounted) {
+        FocusScope.of(context).unfocus(); // Cerrar teclado
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Comentario publicado'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmittingComment = false);
+    }
+  }
+
+  // ==== CALIFICAR ====
+  Future<void> _rateRecipe(int score) async {
+    try {
+      await ref.read(socialRepositoryProvider).upsertRating(widget.recipe.id, score);
+      // Refrescar estadísticas
+      ref.refresh(recipeStatsProvider(widget.recipe.id));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('¡Gracias por calificar!'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final recipe = widget.recipe;
+    
+    final asyncComments = ref.watch(recipeCommentsProvider(recipe.id));
+    final asyncStats = ref.watch(recipeStatsProvider(recipe.id));
 
     return Scaffold(
       appBar: AppBar(
@@ -122,7 +176,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.flag, size: 28),
-            onPressed: () => _reportContent('Receta'),
+            onPressed: () => _reportContent('Receta', recipe.id),
             tooltip: 'Reportar Receta',
           ),
         ],
@@ -153,9 +207,12 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
           Text(recipe.title, style: theme.textTheme.displayMedium),
           const SizedBox(height: 8),
           if (recipe.category != null)
-            Chip(
-              label: Text(recipe.category!, style: const TextStyle(fontSize: 16)),
-              backgroundColor: theme.colorScheme.primaryContainer,
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Chip(
+                label: Text(recipe.category!, style: const TextStyle(fontSize: 16)),
+                backgroundColor: theme.colorScheme.primaryContainer,
+              ),
             ),
           const SizedBox(height: 16),
           
@@ -168,7 +225,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
             const SizedBox(height: 24),
           ],
           
-          // Tiempo y Porciones
+          // Tiempo, Porciones y Rating (Stat)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -185,17 +242,33 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                   children: [
                     const Icon(Icons.people, size: 28, color: Colors.blue),
                     const SizedBox(width: 8),
-                    Text('${recipe.servings} porciones', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text('${recipe.servings} porc.', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   ],
                 ),
+              // Promedio de estrellas
+              asyncStats.when(
+                data: (stats) => Row(
+                  children: [
+                    const Icon(Icons.star, size: 28, color: Colors.amber),
+                    const SizedBox(width: 4),
+                    Text(
+                      stats['count'] > 0 ? '${(stats['average'] as double).toStringAsFixed(1)}' : 'N/A',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    Text(' (${stats['count']})', style: const TextStyle(fontSize: 14, color: Colors.grey)),
+                  ],
+                ),
+                loading: () => const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
             ],
           ),
           const SizedBox(height: 24),
           
-          // Botón de lectura de voz (Accesibilidad Mayor)
+          // Botón de lectura de voz
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
-              minimumSize: const Size(double.infinity, 64), // Touch target grande
+              minimumSize: const Size(double.infinity, 64),
               backgroundColor: _isPlayingTts ? Colors.red.shade100 : theme.colorScheme.primaryContainer,
               foregroundColor: _isPlayingTts ? Colors.red : theme.colorScheme.onPrimaryContainer,
             ),
@@ -263,23 +336,28 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
 
           const Divider(height: 48, thickness: 2),
           
-          // Estrellas (Calificación)
+          // Estrellas interactivas (Calificación)
           const Text('Califica esta receta', textAlign: TextAlign.center, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(5, (index) {
-              return IconButton(
-                iconSize: 56, // Touch target gigante para adultos mayores
-                icon: Icon(
-                  index < _currentRating ? Icons.star : Icons.star_border,
-                  color: Colors.orange,
-                ),
-                onPressed: () {
-                  setState(() => _currentRating = index + 1);
-                },
+          asyncStats.when(
+            data: (stats) {
+              final userRating = stats['userRating'] as int;
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (index) {
+                  return IconButton(
+                    iconSize: 56, // Touch target gigante
+                    icon: Icon(
+                      index < userRating ? Icons.star : Icons.star_border,
+                      color: Colors.orange,
+                    ),
+                    onPressed: () => _rateRecipe(index + 1),
+                  );
+                }),
               );
-            }),
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (_, __) => const Center(child: Text('Error cargando calificación')),
           ),
           
           const Divider(height: 48, thickness: 2),
@@ -299,19 +377,52 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                   ),
                 ),
               ),
-              IconButton(
-                iconSize: 40,
-                icon: Icon(Icons.send, color: theme.colorScheme.primary),
-                onPressed: () {
-                  _commentController.clear();
-                },
-              ),
+              const SizedBox(width: 8),
+              _isSubmittingComment
+                  ? const CircularProgressIndicator()
+                  : IconButton(
+                      iconSize: 40,
+                      icon: Icon(Icons.send, color: theme.colorScheme.primary),
+                      onPressed: _submitComment,
+                    ),
             ],
           ),
           const SizedBox(height: 24),
           
-          // Lista de Comentarios (Ejemplo UI)
-          const Center(child: Text('Aún no hay comentarios.', style: TextStyle(fontSize: 16, color: Colors.grey))),
+          // Lista de Comentarios Reales
+          asyncComments.when(
+            data: (comments) {
+              if (comments.isEmpty) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Text('Aún no hay comentarios. ¡Sé el primero!', style: TextStyle(fontSize: 16, color: Colors.grey)),
+                  ),
+                );
+              }
+              return Column(
+                children: comments.map((comment) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: CircleAvatar(
+                    backgroundImage: comment.authorAvatarUrl != null ? NetworkImage(comment.authorAvatarUrl!) : null,
+                    child: comment.authorAvatarUrl == null ? const Icon(Icons.person) : null,
+                  ),
+                  title: Text(comment.authorName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 4.0),
+                    child: Text(comment.content, style: const TextStyle(fontSize: 16)),
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.flag, color: Colors.grey),
+                    onPressed: () => _reportContent('Comentario', comment.id),
+                  ),
+                )).toList(),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, stack) => Text('Error cargando comentarios: $err', style: const TextStyle(color: Colors.red)),
+          ),
+          const SizedBox(height: 40),
         ],
       ),
     );
