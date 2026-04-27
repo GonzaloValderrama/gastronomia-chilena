@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'filtered_recipes_screen.dart';
 
 class DictionaryScreen extends StatelessWidget {
   const DictionaryScreen({super.key});
@@ -55,7 +56,15 @@ class DictionaryScreen extends StatelessWidget {
                     child: InkWell(
                       borderRadius: BorderRadius.circular(16),
                       onTap: () {
-                        // Navegar a feed filtrado por categoría
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => FilteredRecipesScreen(
+                              filterType: FilterType.category,
+                              filterValue: cat['title'] as String,
+                            ),
+                          ),
+                        );
                       },
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -101,7 +110,15 @@ class DictionaryScreen extends StatelessWidget {
                     child: InkWell(
                       borderRadius: BorderRadius.circular(12),
                       onTap: () {
-                        // Filtrar el feed por la letra seleccionada
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => FilteredRecipesScreen(
+                              filterType: FilterType.letter,
+                              filterValue: letter,
+                            ),
+                          ),
+                        );
                       },
                       child: Container(
                         width: 64, // Ancho amplio para touch target

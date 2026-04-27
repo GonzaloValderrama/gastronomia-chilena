@@ -61,4 +61,40 @@ class RecipeRepository {
       rethrow;
     }
   }
+
+  /// Obtiene recetas por categoría
+  Future<List<Recipe>> getRecipesByCategory(String category) async {
+    try {
+      final response = await _supabase
+          .from('recipes')
+          .select()
+          .eq('is_hidden', false)
+          .eq('category', category)
+          .order('created_at', ascending: false);
+
+      final List<dynamic> data = response;
+      return data.map((json) => Recipe.fromJson(json)).toList();
+    } catch (e) {
+      print('Error en getRecipesByCategory: $e');
+      rethrow;
+    }
+  }
+
+  /// Obtiene recetas por letra inicial (ignorando mayúsculas/minúsculas)
+  Future<List<Recipe>> getRecipesByLetter(String letter) async {
+    try {
+      final response = await _supabase
+          .from('recipes')
+          .select()
+          .eq('is_hidden', false)
+          .ilike('title', '$letter%') // Usar ilike para ignorar case sensitiveness
+          .order('title', ascending: true); // Orden alfabético
+
+      final List<dynamic> data = response;
+      return data.map((json) => Recipe.fromJson(json)).toList();
+    } catch (e) {
+      print('Error en getRecipesByLetter: $e');
+      rethrow;
+    }
+  }
 }
