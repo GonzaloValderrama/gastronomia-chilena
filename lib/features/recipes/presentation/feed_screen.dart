@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/recipe.dart';
 import 'recipe_provider.dart';
 import 'create_recipe_screen.dart';
+import '../../social/presentation/recipe_detail_screen.dart';
 
 class FeedScreen extends ConsumerStatefulWidget {
   const FeedScreen({super.key});
@@ -112,7 +113,12 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () {
-          // Navegar al detalle de receta
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => RecipeDetailScreen(recipe: recipe),
+            ),
+          );
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
