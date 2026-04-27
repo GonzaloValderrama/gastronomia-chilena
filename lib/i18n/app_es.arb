@@ -1,0 +1,15 @@
+{
+  "@@locale": "es",
+  "appTitle": "Gastronomía a la Chilena",
+  "@appTitle": {
+    "description": "El título principal de la aplicación"
+  },
+  "loginButton": "Iniciar Sesión",
+  "@loginButton": {
+    "description": "Texto del botón para iniciar sesión"
+  },
+  "searchPlaceholder": "Buscar receta o ingrediente...",
+  "@searchPlaceholder": {
+    "description": "Texto por defecto en la barra de búsqueda"
+  }
+}

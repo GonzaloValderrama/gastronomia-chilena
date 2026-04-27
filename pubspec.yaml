@@ -1,0 +1,46 @@
+name: gastronomia_chilena
+description: App de recetas tradicionales e internacionales adaptadas al estilo chileno.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  
+  # Estado y Navegación
+  flutter_riverpod: ^2.5.1
+  go_router: ^14.0.0
+  
+  # Supabase
+  supabase_flutter: ^2.5.4
+  
+  # Utilidades y Multimedia
+  image_picker: ^1.1.0
+  video_trimmer: ^3.0.1
+  cached_network_image: ^3.3.1
+  share_plus: ^9.0.0
+  intl: ^0.18.1
+  
+  # Accesibilidad y Hardware
+  flutter_tts: ^4.0.2
+  speech_to_text: ^6.6.1
+  
+  # Monetización
+  google_mobile_ads: ^5.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.2
+
+flutter:
+  uses-material-design: true
+  generate: true
+
+dependency_overrides:
+  intl: ^0.20.2
