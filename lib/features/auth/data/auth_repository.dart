@@ -1,5 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+// URL base de la app web publicada
+const String _webAppUrl = 'https://gastronomiachilena.netlify.app';
+
 class AuthRepository {
   final SupabaseClient _supabase;
 
@@ -24,14 +27,17 @@ class AuthRepository {
 
   // Enviar correo de recuperación
   Future<void> resetPassword(String email) async {
-    await _supabase.auth.resetPasswordForEmail(email);
+    await _supabase.auth.resetPasswordForEmail(
+      email,
+      redirectTo: _webAppUrl,
+    );
   }
 
   // Iniciar sesión con Google (OAuth)
   Future<bool> signInWithGoogle() async {
     return await _supabase.auth.signInWithOAuth(
       OAuthProvider.google,
-      redirectTo: 'cl.gastronomia://login-callback',
+      redirectTo: _webAppUrl,
     );
   }
 
@@ -39,7 +45,7 @@ class AuthRepository {
   Future<bool> signInWithFacebook() async {
     return await _supabase.auth.signInWithOAuth(
       OAuthProvider.facebook,
-      redirectTo: 'cl.gastronomia://login-callback',
+      redirectTo: _webAppUrl,
     );
   }
 
