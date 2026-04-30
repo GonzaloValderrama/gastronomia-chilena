@@ -10,13 +10,15 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
-  bool _isRegistering = false;
+  bool _isRegistering = true;
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -30,7 +32,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         await authRepo.signUpWithEmail(
           _emailController.text.trim(),
           _passwordController.text,
-          'Nuevo Usuario', // Podría expandirse para pedir el nombre
+          _nameController.text.trim().isNotEmpty ? _nameController.text.trim() : 'Nuevo Usuario',
         );
         _showMessage('Registro exitoso. Revisa tu correo.', isError: false);
       } else {
@@ -83,13 +85,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.red.shade800,
-              Colors.orange.shade600,
-            ],
+          image: DecorationImage(
+            image: const AssetImage('assets/images/login_bg.jpg'),
+            fit: BoxFit.cover,
+            colorFilter: ColorFilter.mode(
+              Colors.black.withOpacity(0.6),
+              BlendMode.darken,
+            ),
           ),
         ),
         child: SafeArea(
@@ -132,6 +134,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       const SizedBox(height: 40),
                       
                       // Text Fields
+                      if (_isRegistering) ...[
+                        TextField(
+                          controller: _nameController,
+                          style: theme.textTheme.bodyLarge,
+                          decoration: InputDecoration(
+                            labelText: 'Nombre Completo',
+                            prefixIcon: const Icon(Icons.person_outline),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            contentPadding: const EdgeInsets.all(20),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
                       TextField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
