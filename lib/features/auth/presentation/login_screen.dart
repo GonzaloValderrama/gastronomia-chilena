@@ -78,105 +78,197 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isRegistering ? 'Crear Cuenta' : 'Iniciar Sesión'),
-        centerTitle: true,
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Campos de texto grandes y legibles
-              TextField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                style: theme.textTheme.bodyLarge,
-                decoration: const InputDecoration(
-                  labelText: 'Correo Electrónico',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.all(16),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _passwordController,
-                obscureText: true,
-                style: theme.textTheme.bodyLarge,
-                decoration: const InputDecoration(
-                  labelText: 'Contraseña',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.all(16),
-                ),
-              ),
-              const SizedBox(height: 24),
-              
-              if (_isLoading)
-                const Center(child: CircularProgressIndicator())
-              else
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    ElevatedButton(
-                      onPressed: _submit,
-                      child: Text(_isRegistering ? 'Registrarse' : 'Ingresar'),
-                    ),
-                    const SizedBox(height: 16),
-                    OutlinedButton(
-                      onPressed: () {
-                        setState(() => _isRegistering = !_isRegistering);
-                      },
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 56), // Touch target grande
-                      ),
-                      child: Text(
-                        _isRegistering 
-                            ? '¿Ya tienes cuenta? Inicia sesión' 
-                            : '¿No tienes cuenta? Regístrate',
-                        style: theme.textTheme.labelLarge,
-                      ),
-                    ),
-                    if (!_isRegistering) ...[
-                      const SizedBox(height: 16),
-                      TextButton(
-                        onPressed: _resetPassword,
-                        style: TextButton.styleFrom(
-                          minimumSize: const Size(double.infinity, 56),
-                        ),
-                        child: Text(
-                          'Olvidé mi contraseña',
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            decoration: TextDecoration.underline,
-                          ),
-                        ),
-                      ),
-                    ],
-                    const Divider(height: 48, thickness: 2),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.g_mobiledata, size: 32),
-                      label: const Text('Entrar con Google'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
-                      ),
-                      onPressed: () => ref.read(authRepositoryProvider).signInWithGoogle(),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.facebook, size: 28),
-                      label: const Text('Entrar con Facebook'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1877F2),
-                        foregroundColor: Colors.white,
-                      ),
-                      onPressed: () => ref.read(authRepositoryProvider).signInWithFacebook(),
-                    ),
-                  ],
-                ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.red.shade800,
+              Colors.orange.shade600,
             ],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: Card(
+                elevation: 12,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+                color: isDark ? theme.colorScheme.surface : Colors.white,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 40.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Header
+                      Icon(
+                        Icons.restaurant,
+                        size: 64,
+                        color: Colors.red.shade600,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        _isRegistering ? 'Crear Cuenta' : 'Iniciar Sesión',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.headlineLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Gastronomía a la Chilena',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                      
+                      // Text Fields
+                      TextField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        style: theme.textTheme.bodyLarge,
+                        decoration: InputDecoration(
+                          labelText: 'Correo Electrónico',
+                          prefixIcon: const Icon(Icons.email_outlined),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          contentPadding: const EdgeInsets.all(20),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      TextField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        style: theme.textTheme.bodyLarge,
+                        decoration: InputDecoration(
+                          labelText: 'Contraseña',
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          contentPadding: const EdgeInsets.all(20),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      
+                      if (_isLoading)
+                        const Center(child: CircularProgressIndicator())
+                      else
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            ElevatedButton(
+                              onPressed: _submit,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red.shade700,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 20),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                elevation: 4,
+                              ),
+                              child: Text(
+                                _isRegistering ? 'REGISTRARSE' : 'INGRESAR',
+                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            OutlinedButton(
+                              onPressed: () {
+                                setState(() => _isRegistering = !_isRegistering);
+                              },
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: const Size(double.infinity, 56),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                side: BorderSide(color: Colors.red.shade300, width: 2),
+                              ),
+                              child: Text(
+                                _isRegistering 
+                                    ? '¿Ya tienes cuenta? Inicia sesión' 
+                                    : '¿No tienes cuenta? Regístrate',
+                                style: theme.textTheme.labelLarge?.copyWith(
+                                  color: Colors.red.shade700,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            if (!_isRegistering) ...[
+                              const SizedBox(height: 16),
+                              TextButton(
+                                onPressed: _resetPassword,
+                                style: TextButton.styleFrom(
+                                  minimumSize: const Size(double.infinity, 56),
+                                ),
+                                child: Text(
+                                  'Olvidé mi contraseña',
+                                  style: theme.textTheme.labelLarge?.copyWith(
+                                    decoration: TextDecoration.underline,
+                                    color: Colors.grey.shade700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 24),
+                            Row(
+                              children: [
+                                const Expanded(child: Divider(thickness: 1.5)),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  child: Text('O', style: TextStyle(color: Colors.grey.shade600)),
+                                ),
+                                const Expanded(child: Divider(thickness: 1.5)),
+                              ],
+                            ),
+                            const SizedBox(height: 24),
+                            ElevatedButton.icon(
+                              icon: const Icon(Icons.g_mobiledata, size: 32),
+                              label: const Text('Entrar con Google', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isDark ? Colors.grey.shade800 : Colors.white,
+                                foregroundColor: isDark ? Colors.white : Colors.black87,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                elevation: 2,
+                              ),
+                              onPressed: () => ref.read(authRepositoryProvider).signInWithGoogle(),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              icon: const Icon(Icons.facebook, size: 28),
+                              label: const Text('Entrar con Facebook', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF1877F2),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                elevation: 2,
+                              ),
+                              onPressed: () => ref.read(authRepositoryProvider).signInWithFacebook(),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ),

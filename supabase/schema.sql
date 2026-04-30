@@ -76,6 +76,7 @@ CREATE TABLE public.recipes (
     servings int,
     category text CHECK (category IN ('General', 'Comida caliente', 'Comida fría', 'Repostería')),
     media_urls text[], -- Almacena URLs de fotos y videos
+    edit_count int DEFAULT 0 NOT NULL,
     is_hidden boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
@@ -167,7 +168,29 @@ CREATE POLICY "Usuarios insertan reportes" ON public.reports
     FOR INSERT WITH CHECK (auth.uid() = reporter_id);
 
 -- ==============================================================================
--- 7. FUNCIONES Y TRIGGERS (LÓGICA DE NEGOCIO Y MODERACIÓN)
+-- 7. TABLA: favorite_recipes (Recetas favoritas de usuarios)
+-- ==============================================================================
+CREATE TABLE public.favorite_recipes (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    recipe_id uuid REFERENCES public.recipes(id) ON DELETE CASCADE NOT NULL,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    UNIQUE(user_id, recipe_id)
+);
+
+ALTER TABLE public.favorite_recipes ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Usuarios leen sus favoritos" ON public.favorite_recipes
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Usuarios insertan sus favoritos" ON public.favorite_recipes
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Usuarios eliminan sus favoritos" ON public.favorite_recipes
+    FOR DELETE USING (auth.uid() = user_id);
+
+-- ==============================================================================
+-- 8. FUNCIONES Y TRIGGERS (LÓGICA DE NEGOCIO Y MODERACIÓN)
 -- ==============================================================================
 
 -- A) Filtro de Palabras Prohibidas
@@ -256,8 +279,26 @@ CREATE TRIGGER auto_hide_entity_on_report
     AFTER INSERT ON public.reports
     FOR EACH ROW EXECUTE PROCEDURE auto_hide_on_reports();
 
+-- D) Límite de 3 ediciones para recetas
+CREATE OR REPLACE FUNCTION check_recipe_edits() RETURNS trigger AS $$
+BEGIN
+    -- Solo aplicar el límite si el autor es quien actualiza (no administradores ocultando)
+    IF (auth.uid() = OLD.author_id) THEN
+        IF OLD.edit_count >= 3 THEN
+            RAISE EXCEPTION 'Límite máximo de 3 ediciones alcanzado.';
+        END IF;
+        NEW.edit_count = OLD.edit_count + 1;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER check_edit_limit_recipes
+    BEFORE UPDATE ON public.recipes
+    FOR EACH ROW EXECUTE PROCEDURE check_recipe_edits();
+
 -- ==============================================================================
--- 8. VISTAS MATERIALIZADAS PARA RANKINGS
+-- 9. VISTAS MATERIALIZADAS PARA RANKINGS
 -- ==============================================================================
 
 -- Vista de Rankings Globales/Combinados

@@ -10,6 +10,7 @@ class Recipe {
   final String? category;
   final List<String>? mediaUrls;
   final bool isHidden;
+  final int editCount;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -25,6 +26,7 @@ class Recipe {
     this.category,
     this.mediaUrls,
     required this.isHidden,
+    required this.editCount,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -42,6 +44,7 @@ class Recipe {
       category: json['category'] as String?,
       mediaUrls: json['media_urls'] != null ? List<String>.from(json['media_urls']) : null,
       isHidden: json['is_hidden'] as bool? ?? false,
+      editCount: json['edit_count'] as int? ?? 0,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -60,6 +63,7 @@ class Recipe {
       'category': category,
       'media_urls': mediaUrls,
       'is_hidden': isHidden,
+      'edit_count': editCount,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };

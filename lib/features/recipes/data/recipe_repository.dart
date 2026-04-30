@@ -119,4 +119,114 @@ class RecipeRepository {
       rethrow;
     }
   }
+
+  /// Actualiza una receta existente (sujeta al límite de ediciones en Supabase)
+  Future<Recipe> updateRecipe(
+      String recipeId, {
+        String? title,
+        String? description,
+        List<String>? ingredients,
+        List<String>? instructions,
+        int? prepTimeMinutes,
+        int? servings,
+        String? category,
+        List<String>? mediaUrls,
+      }) async {
+    try {
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('Usuario no autenticado.');
+      }
+
+      final Map<String, dynamic> updates = {};
+      if (title != null) updates['title'] = title;
+      if (description != null) updates['description'] = description;
+      if (ingredients != null) updates['ingredients'] = ingredients;
+      if (instructions != null) updates['instructions'] = instructions;
+      if (prepTimeMinutes != null) updates['prep_time_minutes'] = prepTimeMinutes;
+      if (servings != null) updates['servings'] = servings;
+      if (category != null) updates['category'] = category;
+      if (mediaUrls != null) updates['media_urls'] = mediaUrls;
+
+      final response = await _supabase
+          .from('recipes')
+          .update(updates)
+          .eq('id', recipeId)
+          .eq('author_id', userId)
+          .select()
+          .single();
+
+      return Recipe.fromJson(response);
+    } catch (e) {
+      print('Error en updateRecipe: $e');
+      if (e is PostgrestException && e.message.contains('3 ediciones')) {
+        throw Exception('Has alcanzado el límite máximo de 3 ediciones para esta receta.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Añadir o remover receta de favoritos
+  Future<void> toggleFavorite(String recipeId, bool isFavorite) async {
+    try {
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) throw Exception('Usuario no autenticado.');
+
+      if (isFavorite) {
+        await _supabase.from('favorite_recipes').insert({
+          'user_id': userId,
+          'recipe_id': recipeId,
+        });
+      } else {
+        await _supabase.from('favorite_recipes')
+            .delete()
+            .eq('user_id', userId)
+            .eq('recipe_id', recipeId);
+      }
+    } catch (e) {
+      print('Error en toggleFavorite: $e');
+      rethrow;
+    }
+  }
+
+  /// Verifica si una receta es favorita
+  Future<bool> isFavorite(String recipeId) async {
+    try {
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) return false;
+
+      final response = await _supabase
+          .from('favorite_recipes')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('recipe_id', recipeId)
+          .maybeSingle();
+
+      return response != null;
+    } catch (e) {
+      print('Error en isFavorite: $e');
+      return false;
+    }
+  }
+
+  /// Obtiene todas las recetas favoritas del usuario actual
+  Future<List<Recipe>> getFavoriteRecipes() async {
+    try {
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) return [];
+
+      final response = await _supabase
+          .from('favorite_recipes')
+          .select('recipes(*)')
+          .eq('user_id', userId)
+          .order('created_at', ascending: false);
+
+      final List<dynamic> data = response;
+      // Extract the nested 'recipes' objects
+      return data.map((item) => Recipe.fromJson(item['recipes'])).toList();
+    } catch (e) {
+      print('Error en getFavoriteRecipes: $e');
+      rethrow;
+    }
+  }
 }

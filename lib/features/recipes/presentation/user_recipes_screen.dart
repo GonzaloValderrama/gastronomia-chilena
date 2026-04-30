@@ -10,93 +10,190 @@ class UserRecipesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final userRecipesAsync = ref.watch(userRecipesProvider);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mis Recetas'),
-        centerTitle: true,
-      ),
-      body: userRecipesAsync.when(
-        data: (recipes) {
-          if (recipes.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.restaurant_menu, size: 80, color: Colors.grey.shade400),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Aún no has subido ninguna receta.',
-                      style: theme.textTheme.headlineMedium?.copyWith(color: Colors.grey.shade600),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const CreateRecipeScreen()),
-                        ).then((_) {
-                          // ignore: unused_result
-                          ref.refresh(userRecipesProvider);
-                        });
-                      },
-                      icon: const Icon(Icons.add),
-                      label: const Text('Crear mi primera receta'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () async {
-              // ignore: unused_result
-              ref.refresh(userRecipesProvider);
-            },
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16.0),
-              itemCount: recipes.length,
-              itemBuilder: (context, index) {
-                final recipe = recipes[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: _buildUserRecipeCard(theme, recipe, context),
-                );
-              },
-            ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text('Error al cargar tus recetas: $error'),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {
-                  // ignore: unused_result
-                  ref.refresh(userRecipesProvider);
-                },
-                child: const Text('Reintentar'),
-              )
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Mis Recetas'),
+          centerTitle: true,
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: 'Recetas Creadas', icon: Icon(Icons.book)),
+              Tab(text: 'Favoritas', icon: Icon(Icons.favorite)),
             ],
           ),
+        ),
+        body: const TabBarView(
+          children: [
+            _CreatedRecipesTab(),
+            _FavoriteRecipesTab(),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CreateRecipeScreen()),
+            ).then((_) {
+              // ignore: unused_result
+              ref.refresh(userRecipesProvider);
+            });
+          },
+          icon: const Icon(Icons.add),
+          label: const Text('Nueva Receta'),
+          backgroundColor: Colors.red.shade600,
+          foregroundColor: Colors.white,
         ),
       ),
     );
   }
+}
 
-  Widget _buildUserRecipeCard(ThemeData theme, Recipe recipe, BuildContext context) {
+class _CreatedRecipesTab extends ConsumerWidget {
+  const _CreatedRecipesTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final userRecipesAsync = ref.watch(userRecipesProvider);
+
+    return userRecipesAsync.when(
+      data: (recipes) {
+        if (recipes.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.restaurant_menu, size: 80, color: Colors.grey.shade400),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Aún no has subido ninguna receta.',
+                    style: theme.textTheme.headlineMedium?.copyWith(color: Colors.grey.shade600),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            // ignore: unused_result
+            ref.refresh(userRecipesProvider);
+          },
+          child: ListView.builder(
+            padding: const EdgeInsets.only(top: 16.0, left: 16.0, right: 16.0, bottom: 80.0),
+            itemCount: recipes.length,
+            itemBuilder: (context, index) {
+              final recipe = recipes[index];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: _RecipeCard(recipe: recipe),
+              );
+            },
+          ),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Error al cargar tus recetas: $error'),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                // ignore: unused_result
+                ref.refresh(userRecipesProvider);
+              },
+              child: const Text('Reintentar'),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FavoriteRecipesTab extends ConsumerWidget {
+  const _FavoriteRecipesTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final favoriteRecipesAsync = ref.watch(favoriteRecipesProvider);
+
+    return favoriteRecipesAsync.when(
+      data: (recipes) {
+        if (recipes.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.favorite_border, size: 80, color: Colors.grey.shade400),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Aún no tienes recetas favoritas.',
+                    style: theme.textTheme.headlineMedium?.copyWith(color: Colors.grey.shade600),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            // ignore: unused_result
+            ref.refresh(favoriteRecipesProvider);
+          },
+          child: ListView.builder(
+            padding: const EdgeInsets.only(top: 16.0, left: 16.0, right: 16.0, bottom: 80.0),
+            itemCount: recipes.length,
+            itemBuilder: (context, index) {
+              final recipe = recipes[index];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: _RecipeCard(recipe: recipe),
+              );
+            },
+          ),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Error al cargar favoritas: $error'),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                // ignore: unused_result
+                ref.refresh(favoriteRecipesProvider);
+              },
+              child: const Text('Reintentar'),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RecipeCard extends StatelessWidget {
+  final Recipe recipe;
+  const _RecipeCard({required this.recipe});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Card(
       elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

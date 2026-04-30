@@ -30,3 +30,15 @@ final userRecipesProvider = FutureProvider.autoDispose<List<Recipe>>((ref) async
   final repository = ref.watch(recipeRepositoryProvider);
   return repository.getUserRecipes();
 });
+
+// Proveedor para obtener las recetas favoritas del usuario autenticado
+final favoriteRecipesProvider = FutureProvider.autoDispose<List<Recipe>>((ref) async {
+  final repository = ref.watch(recipeRepositoryProvider);
+  return repository.getFavoriteRecipes();
+});
+
+// Proveedor para verificar si una receta es favorita (por ID)
+final isFavoriteRecipeProvider = FutureProvider.autoDispose.family<bool, String>((ref, recipeId) async {
+  final repository = ref.watch(recipeRepositoryProvider);
+  return repository.isFavorite(recipeId);
+});

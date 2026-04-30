@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../../recipes/domain/recipe.dart';
+import '../../recipes/presentation/recipe_provider.dart';
+import '../../recipes/presentation/edit_recipe_screen.dart';
 import 'social_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class RecipeDetailScreen extends ConsumerStatefulWidget {
   final Recipe recipe;
@@ -164,11 +167,47 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
     
     final asyncComments = ref.watch(recipeCommentsProvider(recipe.id));
     final asyncStats = ref.watch(recipeStatsProvider(recipe.id));
+    final isFavoriteAsync = ref.watch(isFavoriteRecipeProvider(recipe.id));
+    
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    final isAuthor = currentUserId != null && currentUserId == recipe.authorId;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(recipe.title),
         actions: [
+          isFavoriteAsync.when(
+            data: (isFavorite) => IconButton(
+              icon: Icon(
+                isFavorite ? Icons.favorite : Icons.favorite_border,
+                color: isFavorite ? Colors.red : null,
+                size: 28,
+              ),
+              onPressed: () async {
+                try {
+                  await ref.read(recipeRepositoryProvider).toggleFavorite(recipe.id, !isFavorite);
+                  // ignore: unused_result
+                  ref.refresh(isFavoriteRecipeProvider(recipe.id));
+                  // ignore: unused_result
+                  ref.refresh(favoriteRecipesProvider);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(isFavorite ? 'Eliminada de favoritos' : 'Añadida a favoritos')),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                    );
+                  }
+                }
+              },
+              tooltip: isFavorite ? 'Quitar de favoritos' : 'Añadir a favoritos',
+            ),
+            loading: () => const IconButton(icon: Icon(Icons.favorite_border), onPressed: null),
+            error: (_, __) => const IconButton(icon: Icon(Icons.favorite_border), onPressed: null),
+          ),
           IconButton(
             icon: const Icon(Icons.share, size: 28),
             onPressed: _shareRecipe,
@@ -179,6 +218,17 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
             onPressed: () => _reportContent('Receta', recipe.id),
             tooltip: 'Reportar Receta',
           ),
+          if (isAuthor)
+            IconButton(
+              icon: const Icon(Icons.edit, size: 28),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => EditRecipeScreen(recipe: recipe)),
+                );
+              },
+              tooltip: 'Editar Receta',
+            ),
         ],
       ),
       body: ListView(
