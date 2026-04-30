@@ -87,7 +87,7 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
       if (instructions.isEmpty) throw Exception('Debes agregar al menos un paso de instrucción.');
 
       await ref.read(recipeRepositoryProvider).updateRecipe(
-        id: widget.recipe.id,
+        widget.recipe.id,
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
         ingredients: ingredients,
