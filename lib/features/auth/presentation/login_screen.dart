@@ -12,6 +12,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _nameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
@@ -20,6 +21,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _lastNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -30,11 +32,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final authRepo = ref.read(authRepositoryProvider);
     try {
       if (_isRegistering) {
+        final fullName = '${_nameController.text.trim()} ${_lastNameController.text.trim()}'.trim();
         await authRepo.signUpWithEmail(
           _emailController.text.trim(),
           _passwordController.text,
-          _nameController.text.trim().isNotEmpty
-              ? _nameController.text.trim()
+          fullName.isNotEmpty
+              ? fullName
               : 'Nuevo Usuario',
         );
         _showMessage('Registro exitoso. Revisa tu correo.', isError: false);
@@ -112,8 +115,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: Container(
                     decoration: BoxDecoration(
                       color: isDark
-                          ? theme.colorScheme.surface.withOpacity(0.7)
-                          : Colors.white.withOpacity(0.85),
+                          ? theme.colorScheme.surface.withOpacity(0.4)
+                          : Colors.white.withOpacity(0.4),
                       borderRadius: BorderRadius.circular(32),
                       border: Border.all(
                         color: Colors.white.withOpacity(0.3),
@@ -128,12 +131,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           // Header
-                          Icon(
-                            Icons.restaurant,
-                            size: 64,
-                            color: Colors.red.shade600,
-                          ),
-                          const SizedBox(height: 16),
                           Text(
                             _isRegistering ? 'Crear Cuenta' : 'Iniciar Sesión',
                             textAlign: TextAlign.center,
@@ -158,7 +155,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               controller: _nameController,
                               style: theme.textTheme.bodyLarge,
                               decoration: InputDecoration(
-                                labelText: 'Nombre y Apellido',
+                                labelText: 'Nombre',
+                                prefixIcon: const Icon(Icons.person_outline),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                contentPadding: const EdgeInsets.all(20),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            TextField(
+                              controller: _lastNameController,
+                              style: theme.textTheme.bodyLarge,
+                              decoration: InputDecoration(
+                                labelText: 'Apellido',
                                 prefixIcon: const Icon(Icons.person_outline),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
