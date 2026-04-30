@@ -97,4 +97,26 @@ class RecipeRepository {
       rethrow;
     }
   }
+
+  /// Obtiene las recetas creadas por el usuario autenticado actual
+  Future<List<Recipe>> getUserRecipes() async {
+    try {
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) {
+        return []; // Si no hay usuario, retornar lista vacía
+      }
+
+      final response = await _supabase
+          .from('recipes')
+          .select()
+          .eq('author_id', userId)
+          .order('created_at', ascending: false);
+
+      final List<dynamic> data = response;
+      return data.map((json) => Recipe.fromJson(json)).toList();
+    } catch (e) {
+      print('Error en getUserRecipes: $e');
+      rethrow;
+    }
+  }
 }

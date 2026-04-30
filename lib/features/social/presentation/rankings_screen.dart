@@ -28,8 +28,9 @@ class RankingsScreen extends StatelessWidget {
           
           // Iconos de Trofeos para los 3 primeros lugares
           Widget? trophy;
-          if (index == 0) trophy = const Icon(Icons.emoji_events, color: Colors.amber, size: 48); // Oro
-          else if (index == 1) trophy = const Icon(Icons.emoji_events, color: Color(0xFFC0C0C0), size: 40); // Plata
+          if (index == 0) {
+            trophy = const Icon(Icons.emoji_events, color: Colors.amber, size: 48); // Oro
+          } else if (index == 1) trophy = const Icon(Icons.emoji_events, color: Color(0xFFC0C0C0), size: 40); // Plata
           else if (index == 2) trophy = const Icon(Icons.emoji_events, color: Color(0xFFCD7F32), size: 40); // Bronce
 
           return Card(

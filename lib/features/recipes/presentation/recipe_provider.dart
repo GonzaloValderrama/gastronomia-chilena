@@ -24,3 +24,9 @@ final recipesByLetterProvider = FutureProvider.autoDispose.family<List<Recipe>, 
   final repository = ref.watch(recipeRepositoryProvider);
   return repository.getRecipesByLetter(letter);
 });
+
+// Proveedor para obtener las recetas subidas por el usuario autenticado
+final userRecipesProvider = FutureProvider.autoDispose<List<Recipe>>((ref) async {
+  final repository = ref.watch(recipeRepositoryProvider);
+  return repository.getUserRecipes();
+});

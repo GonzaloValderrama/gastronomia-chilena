@@ -252,7 +252,7 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
                     const Icon(Icons.star, size: 28, color: Colors.amber),
                     const SizedBox(width: 4),
                     Text(
-                      stats['count'] > 0 ? '${(stats['average'] as double).toStringAsFixed(1)}' : 'N/A',
+                      stats['count'] > 0 ? (stats['average'] as double).toStringAsFixed(1) : 'N/A',
                       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     Text(' (${stats['count']})', style: const TextStyle(fontSize: 14, color: Colors.grey)),

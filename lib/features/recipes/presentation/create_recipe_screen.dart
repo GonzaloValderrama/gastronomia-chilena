@@ -126,7 +126,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: _selectedCategory,
+              initialValue: _selectedCategory,
               decoration: const InputDecoration(labelText: 'Categoría', border: OutlineInputBorder()),
               style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurface),
               items: _categories.map((cat) => DropdownMenuItem(value: cat, child: Text(cat))).toList(),

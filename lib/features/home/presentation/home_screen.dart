@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../recipes/presentation/feed_screen.dart';
+import '../../recipes/presentation/user_recipes_screen.dart';
 import '../../dictionary/presentation/dictionary_screen.dart';
 import '../../settings/presentation/settings_screen.dart';
 
@@ -19,6 +20,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Widget> _screens = [
     const FeedScreen(), // Vista principal de recetas
     const DictionaryScreen(), // Categorías y A-Z
+    const UserRecipesScreen(), // Mis recetas subidas
     const SettingsScreen(), // Ajustes (Accesibilidad/Temas)
   ];
 
@@ -84,6 +86,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: Icon(Icons.sort_by_alpha, size: 32),
                 selectedIcon: Icon(Icons.sort_by_alpha, size: 32),
                 label: 'Diccionario',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.receipt_long_outlined, size: 32),
+                selectedIcon: Icon(Icons.receipt_long, size: 32),
+                label: 'Mis Recetas',
               ),
               NavigationDestination(
                 icon: Icon(Icons.settings_outlined, size: 32),
