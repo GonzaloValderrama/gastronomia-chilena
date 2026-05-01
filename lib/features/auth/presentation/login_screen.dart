@@ -40,7 +40,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ? fullName
               : 'Nuevo Usuario',
         );
-        _showMessage('Registro exitoso. Revisa tu correo.', isError: false);
+        if (!mounted) return;
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Registro Exitoso'),
+            content: const Text(
+                'Tu cuenta ha sido creada. Por favor, revisa tu bandeja de entrada y confirma tu correo electrónico para poder iniciar sesión.'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  setState(() {
+                    _isRegistering = false;
+                    _passwordController.clear();
+                  });
+                },
+                child: const Text('ENTENDIDO'),
+              ),
+            ],
+          ),
+        );
       } else {
         await authRepo.signInWithEmail(
           _emailController.text.trim(),

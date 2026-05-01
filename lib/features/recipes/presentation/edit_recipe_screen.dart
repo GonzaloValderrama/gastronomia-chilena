@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import 'package:gastronomia_chilena/features/recipes/domain/recipe.dart';
 import 'recipe_provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class EditRecipeScreen extends ConsumerStatefulWidget {
   final Recipe recipe;
@@ -25,6 +28,10 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
   late String _selectedCategory;
   final List<String> _categories = ['General', 'Comida caliente', 'Comida fría', 'Repostería'];
   bool _isLoading = false;
+  
+  final ImagePicker _picker = ImagePicker();
+  List<String> _existingImageUrls = [];
+  List<XFile> _newSelectedImages = [];
 
   @override
   void initState() {
@@ -39,6 +46,7 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
     if (!_categories.contains(_selectedCategory)) {
       _selectedCategory = 'General';
     }
+    _existingImageUrls = List.from(widget.recipe.mediaUrls ?? []);
   }
 
   @override
@@ -49,7 +57,39 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
     _instructionsController.dispose();
     _prepTimeController.dispose();
     _servingsController.dispose();
+    _servingsController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImages() async {
+    try {
+      final List<XFile> images = await _picker.pickMultiImage(
+        imageQuality: 80,
+      );
+      if (images.isNotEmpty) {
+        setState(() {
+          _newSelectedImages.addAll(images);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al seleccionar imágenes: $e')),
+        );
+      }
+    }
+  }
+
+  void _removeExistingImage(int index) {
+    setState(() {
+      _existingImageUrls.removeAt(index);
+    });
+  }
+
+  void _removeNewImage(int index) {
+    setState(() {
+      _newSelectedImages.removeAt(index);
+    });
   }
 
   Future<void> _submit() async {
@@ -86,6 +126,27 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
       if (ingredients.isEmpty) throw Exception('Debes agregar al menos un ingrediente.');
       if (instructions.isEmpty) throw Exception('Debes agregar al menos un paso de instrucción.');
 
+      List<String> finalMediaUrls = List.from(_existingImageUrls);
+      
+      // Subir nuevas imágenes si hay seleccionadas
+      if (_newSelectedImages.isNotEmpty) {
+        final storage = Supabase.instance.client.storage.from('recipe_images');
+        
+        for (final image in _newSelectedImages) {
+          final fileName = '${DateTime.now().millisecondsSinceEpoch}_${image.name}';
+          final filePath = '$userId/$fileName';
+          
+          await storage.upload(
+            filePath,
+            File(image.path),
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
+          );
+          
+          final publicUrl = storage.getPublicUrl(filePath);
+          finalMediaUrls.add(publicUrl);
+        }
+      }
+
       await ref.read(recipeRepositoryProvider).updateRecipe(
         widget.recipe.id,
         title: _titleController.text.trim(),
@@ -95,6 +156,7 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
         prepTimeMinutes: int.tryParse(_prepTimeController.text),
         servings: int.tryParse(_servingsController.text),
         category: _selectedCategory,
+        mediaUrls: finalMediaUrls.isEmpty ? null : finalMediaUrls,
       );
 
       if (!mounted) return;
@@ -184,6 +246,96 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
               validator: (val) => val == null || val.isEmpty ? 'El título es obligatorio' : null,
             ),
             const SizedBox(height: 16),
+            
+            // Image Management Section
+            Text('Imágenes', style: theme.textTheme.titleLarge),
+            const SizedBox(height: 8),
+            if (_existingImageUrls.isNotEmpty || _newSelectedImages.isNotEmpty)
+              SizedBox(
+                height: 100,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    // Mostrar imágenes existentes
+                    for (int i = 0; i < _existingImageUrls.length; i++)
+                      Stack(
+                        children: [
+                          Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            width: 100,
+                            height: 100,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              image: DecorationImage(
+                                image: CachedNetworkImageProvider(_existingImageUrls[i]),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                          if (!isLimitReached)
+                            Positioned(
+                              top: 4,
+                              right: 12,
+                              child: GestureDetector(
+                                onTap: () => _removeExistingImage(i),
+                                child: Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.black54,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.close, color: Colors.white, size: 16),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    // Mostrar imágenes nuevas
+                    for (int i = 0; i < _newSelectedImages.length; i++)
+                      Stack(
+                        children: [
+                          Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            width: 100,
+                            height: 100,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              image: DecorationImage(
+                                image: FileImage(File(_newSelectedImages[i].path)),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                          if (!isLimitReached)
+                            Positioned(
+                              top: 4,
+                              right: 12,
+                              child: GestureDetector(
+                                onTap: () => _removeNewImage(i),
+                                child: Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.black54,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.close, color: Colors.white, size: 16),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 8),
+            if (!isLimitReached)
+              OutlinedButton.icon(
+                onPressed: _pickImages,
+                icon: const Icon(Icons.add_photo_alternate),
+                label: const Text('Añadir nuevas imágenes'),
+              ),
+            
+            const SizedBox(height: 16),
             _buildTextField(
               controller: _descriptionController,
               label: 'Descripción breve (opcional)',
@@ -193,7 +345,7 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: _selectedCategory,
+              initialValue: _selectedCategory,
               decoration: const InputDecoration(labelText: 'Categoría', border: OutlineInputBorder()),
               style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurface),
               items: _categories.map((cat) => DropdownMenuItem(value: cat, child: Text(cat))).toList(),

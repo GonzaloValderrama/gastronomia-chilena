@@ -12,11 +12,17 @@ import 'features/home/presentation/home_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inicialización de Supabase
-  await Supabase.initialize(
-    url: 'https://iitzgfjjlfemzanqpaet.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlpdHpnZmpqbGZlbXphbnFwYWV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyMTE4MjUsImV4cCI6MjA5Mjc4NzgyNX0.A6poXmBgNB2W4AcssCsR3nGbKRXD_8ELcf6DI-ynIMA',
-  );
+  try {
+    debugPrint('Iniciando Supabase...');
+    // Inicialización de Supabase
+    await Supabase.initialize(
+      url: 'https://iitzgfjjlfemzanqpaet.supabase.co',
+      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlpdHpnZmpqbGZlbXphbnFwYWV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyMTE4MjUsImV4cCI6MjA5Mjc4NzgyNX0.A6poXmBgNB2W4AcssCsR3nGbKRXD_8ELcf6DI-ynIMA',
+    );
+    debugPrint('Supabase inicializado correctamente.');
+  } catch (e) {
+    debugPrint('Error al inicializar Supabase: $e');
+  }
 
   runApp(
     const ProviderScope(

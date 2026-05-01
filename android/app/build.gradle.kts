@@ -40,5 +40,5 @@ android {
 }
 
 flutter {
-    source = "C:/ANTIGR~1/GASTRO~1"
+    source = "../.."
 }

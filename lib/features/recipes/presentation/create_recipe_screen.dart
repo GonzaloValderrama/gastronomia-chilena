@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import 'recipe_provider.dart';
 
 class CreateRecipeScreen extends ConsumerStatefulWidget {
@@ -22,6 +24,9 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
   String _selectedCategory = 'General';
   final List<String> _categories = ['General', 'Comida caliente', 'Comida fría', 'Repostería'];
   bool _isLoading = false;
+  
+  final ImagePicker _picker = ImagePicker();
+  List<XFile> _selectedImages = [];
 
   @override
   void dispose() {
@@ -32,6 +37,31 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
     _prepTimeController.dispose();
     _servingsController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImages() async {
+    try {
+      final List<XFile> images = await _picker.pickMultiImage(
+        imageQuality: 80,
+      );
+      if (images.isNotEmpty) {
+        setState(() {
+          _selectedImages.addAll(images);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al seleccionar imágenes: $e')),
+        );
+      }
+    }
+  }
+
+  void _removeImage(int index) {
+    setState(() {
+      _selectedImages.removeAt(index);
+    });
   }
 
   // ==== SUBIDA REAL A SUPABASE ====
@@ -60,6 +90,27 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
       if (ingredients.isEmpty) throw Exception('Debes agregar al menos un ingrediente.');
       if (instructions.isEmpty) throw Exception('Debes agregar al menos un paso de instrucción.');
 
+      List<String> mediaUrls = [];
+      
+      // Subir imágenes si hay seleccionadas
+      if (_selectedImages.isNotEmpty) {
+        final storage = Supabase.instance.client.storage.from('recipe_images');
+        
+        for (final image in _selectedImages) {
+          final fileName = '${DateTime.now().millisecondsSinceEpoch}_${image.name}';
+          final filePath = '$userId/$fileName';
+          
+          await storage.upload(
+            filePath,
+            File(image.path),
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
+          );
+          
+          final publicUrl = storage.getPublicUrl(filePath);
+          mediaUrls.add(publicUrl);
+        }
+      }
+
       await ref.read(recipeRepositoryProvider).createRecipe(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
@@ -68,6 +119,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
         prepTimeMinutes: int.tryParse(_prepTimeController.text),
         servings: int.tryParse(_servingsController.text),
         category: _selectedCategory,
+        mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
       );
 
       if (!mounted) return;
@@ -117,6 +169,59 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
               theme: theme,
               validator: (val) => val == null || val.isEmpty ? 'El título es obligatorio' : null,
             ),
+            const SizedBox(height: 16),
+            
+            // Image Picker Section
+            Text('Imágenes', style: theme.textTheme.titleLarge),
+            const SizedBox(height: 8),
+            if (_selectedImages.isNotEmpty)
+              SizedBox(
+                height: 100,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _selectedImages.length,
+                  itemBuilder: (context, index) {
+                    return Stack(
+                      children: [
+                        Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            image: DecorationImage(
+                              image: FileImage(File(_selectedImages[index].path)),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: 4,
+                          right: 12,
+                          child: GestureDetector(
+                            onTap: () => _removeImage(index),
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: const BoxDecoration(
+                                color: Colors.black54,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.close, color: Colors.white, size: 16),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: _pickImages,
+              icon: const Icon(Icons.add_photo_alternate),
+              label: const Text('Añadir imágenes'),
+            ),
+            
             const SizedBox(height: 16),
             _buildTextField(
               controller: _descriptionController,

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../recipes/domain/recipe.dart';
-import '../../recipes/presentation/recipe_provider.dart';
-import '../../social/presentation/recipe_detail_screen.dart';
+import 'package:gastronomia_chilena/features/recipes/domain/recipe.dart';
+import 'package:gastronomia_chilena/features/recipes/presentation/recipe_provider.dart';
+import 'package:gastronomia_chilena/features/social/presentation/recipe_detail_screen.dart';
 
 enum FilterType { category, letter }
 

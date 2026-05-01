@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../domain/recipe.dart';
-import 'recipe_provider.dart';
-import 'create_recipe_screen.dart';
-import '../../social/presentation/recipe_detail_screen.dart';
+import 'package:gastronomia_chilena/features/recipes/domain/recipe.dart';
+import 'package:gastronomia_chilena/features/recipes/presentation/recipe_provider.dart';
+import 'package:gastronomia_chilena/features/social/presentation/recipe_detail_screen.dart';
 
 class FeedScreen extends ConsumerStatefulWidget {
   const FeedScreen({super.key});
@@ -90,17 +89,6 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
             ],
           ),
         ),
-      ),
-      // FAB para agregar receta (Paso 5)
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const CreateRecipeScreen()),
-          );
-        },
-        icon: const Icon(Icons.add, size: 28),
-        label: const Text('Nueva Receta', style: TextStyle(fontSize: 18)),
       ),
     );
   }

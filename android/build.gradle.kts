@@ -16,9 +16,10 @@ subprojects {
     }
 }
 
-rootProject.buildDir = layout.buildDirectory.asFile.get()
+rootProject.layout.buildDirectory.value(rootProject.layout.projectDirectory.dir("../build"))
 subprojects {
-    project.buildDir = layout.buildDirectory.asFile.get()
+    val newBuildDir = rootProject.layout.buildDirectory.dir(project.name)
+    project.layout.buildDirectory.value(newBuildDir)
 }
 subprojects {
     project.evaluationDependsOn(":app")
