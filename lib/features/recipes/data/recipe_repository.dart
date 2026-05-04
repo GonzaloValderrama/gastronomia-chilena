@@ -7,20 +7,30 @@ class RecipeRepository {
   RecipeRepository({SupabaseClient? supabase})
       : _supabase = supabase ?? Supabase.instance.client;
 
-  /// Obtiene las recetas públicas para el Feed, ordenadas por fecha de creación descendente.
-  Future<List<Recipe>> getFeedRecipes() async {
+  /// Obtiene las recetas públicas para el Feed filtradas por categoría y búsqueda
+  Future<List<Recipe>> searchFeedRecipes({String category = 'Todas', String query = ''}) async {
     try {
-      final response = await _supabase
+      var request = _supabase
           .from('recipes')
-          .select()
-          .eq('is_hidden', false)
+          .select('*, profiles:author_id(display_name)')
+          .eq('is_hidden', false);
+
+      if (category != 'Todas') {
+        request = request.eq('category', category);
+      }
+      
+      if (query.isNotEmpty) {
+        request = request.ilike('title', '%$query%');
+      }
+
+      final response = await request
           .order('created_at', ascending: false)
           .limit(20);
 
       final List<dynamic> data = response;
       return data.map((json) => Recipe.fromJson(json)).toList();
     } catch (e) {
-      print('Error en getFeedRecipes: $e');
+      print('Error en searchFeedRecipes: $e');
       rethrow;
     }
   }
@@ -67,7 +77,7 @@ class RecipeRepository {
     try {
       final response = await _supabase
           .from('recipes')
-          .select()
+          .select('*, profiles:author_id(display_name)')
           .eq('is_hidden', false)
           .eq('category', category)
           .order('created_at', ascending: false);
@@ -85,7 +95,7 @@ class RecipeRepository {
     try {
       final response = await _supabase
           .from('recipes')
-          .select()
+          .select('*, profiles:author_id(display_name)')
           .eq('is_hidden', false)
           .ilike('title', '$letter%') // Usar ilike para ignorar case sensitiveness
           .order('title', ascending: true); // Orden alfabético
@@ -108,7 +118,7 @@ class RecipeRepository {
 
       final response = await _supabase
           .from('recipes')
-          .select()
+          .select('*, profiles:author_id(display_name)')
           .eq('author_id', userId)
           .order('created_at', ascending: false);
 

@@ -11,6 +11,8 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentTheme = ref.watch(themeProvider);
     final theme = Theme.of(context);
+    final currentUser = ref.watch(authRepositoryProvider).currentUser;
+    final userName = currentUser?.userMetadata?['full_name'] as String? ?? 'Usuario';
 
     return Scaffold(
       appBar: AppBar(
@@ -20,6 +22,14 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
+          Text(
+            'Hola $userName',
+            style: theme.textTheme.headlineLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 24),
           Text(
             'Tema Visual',
             style: theme.textTheme.displaySmall,
@@ -61,6 +71,18 @@ class SettingsScreen extends ConsumerWidget {
           Text(
             'Cuenta',
             style: theme.textTheme.displaySmall,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Sesión iniciada como: $userName',
+            style: theme.textTheme.bodyLarge,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            currentUser?.email ?? '',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 16),
           ElevatedButton.icon(

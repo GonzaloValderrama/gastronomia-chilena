@@ -16,8 +16,8 @@ class DictionaryScreen extends StatelessWidget {
       {'title': 'Repostería', 'icon': Icons.cake},
     ];
 
-    // Abecedario
-    final letters = List.generate(26, (index) => String.fromCharCode(index + 65));
+    // Abecedario con Ñ
+    final letters = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','Ñ','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
 
     return Scaffold(
       appBar: AppBar(
@@ -96,46 +96,46 @@ class DictionaryScreen extends StatelessWidget {
               ),
             ),
           ),
-          SliverToBoxAdapter(
-            child: SizedBox(
-              height: 80, // Altura accesible para tocar las letras
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                itemCount: letters.length,
-                itemBuilder: (context, index) {
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 5,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+                childAspectRatio: 1.0,
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
                   final letter = letters[index];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => FilteredRecipesScreen(
-                              filterType: FilterType.letter,
-                              filterValue: letter,
-                            ),
+                  return InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => FilteredRecipesScreen(
+                            filterType: FilterType.letter,
+                            filterValue: letter,
                           ),
-                        );
-                      },
-                      child: Container(
-                        width: 64, // Ancho amplio para touch target
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: theme.dividerColor),
                         ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          letter,
-                          style: theme.textTheme.displaySmall,
-                        ),
+                      );
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: theme.dividerColor),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        letter,
+                        style: theme.textTheme.displaySmall,
                       ),
                     ),
                   );
                 },
+                childCount: letters.length,
               ),
             ),
           ),

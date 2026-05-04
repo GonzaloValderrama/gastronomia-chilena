@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:gastronomia_chilena/features/recipes/domain/recipe.dart';
 import 'recipe_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -21,7 +24,6 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
   late final TextEditingController _titleController;
   late final TextEditingController _descriptionController;
   late final TextEditingController _ingredientsController;
-  late final TextEditingController _instructionsController;
   late final TextEditingController _prepTimeController;
   late final TextEditingController _servingsController;
 
@@ -32,14 +34,18 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
   final ImagePicker _picker = ImagePicker();
   List<String> _existingImageUrls = [];
   List<XFile> _newSelectedImages = [];
+  
+  final List<Map<String, dynamic>> _instructionSteps = [];
+  final stt.SpeechToText _speechToText = stt.SpeechToText();
+  bool _speechEnabled = false;
 
   @override
   void initState() {
     super.initState();
+    _initSpeech();
     _titleController = TextEditingController(text: widget.recipe.title);
     _descriptionController = TextEditingController(text: widget.recipe.description ?? '');
     _ingredientsController = TextEditingController(text: widget.recipe.ingredients.join('\n'));
-    _instructionsController = TextEditingController(text: widget.recipe.instructions.join('\n'));
     _prepTimeController = TextEditingController(text: widget.recipe.prepTimeMinutes?.toString() ?? '');
     _servingsController = TextEditingController(text: widget.recipe.servings?.toString() ?? '');
     _selectedCategory = widget.recipe.category ?? 'General';
@@ -47,6 +53,39 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
       _selectedCategory = 'General';
     }
     _existingImageUrls = List.from(widget.recipe.mediaUrls ?? []);
+    
+    final parsed = widget.recipe.parsedInstructions;
+    if (parsed.isEmpty) {
+      _addInstructionStep();
+    } else {
+      for (final step in parsed) {
+        _instructionSteps.add({
+          'text': TextEditingController(text: step.text),
+          'existingImage': step.imageUrl,
+          'image': null,
+        });
+      }
+    }
+  }
+
+  void _initSpeech() async {
+    _speechEnabled = await _speechToText.initialize();
+    setState(() {});
+  }
+
+  void _startListening(TextEditingController controller) async {
+    if (_speechEnabled) {
+      await _speechToText.listen(
+        onResult: (result) {
+          setState(() {
+            final currentText = controller.text;
+            final space = currentText.isNotEmpty && !currentText.endsWith(' ') ? ' ' : '';
+            controller.text = currentText + space + result.recognizedWords;
+          });
+        },
+        localeId: 'es_CL',
+      );
+    }
   }
 
   @override
@@ -54,9 +93,11 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
     _titleController.dispose();
     _descriptionController.dispose();
     _ingredientsController.dispose();
-    _instructionsController.dispose();
     _prepTimeController.dispose();
     _servingsController.dispose();
+    for (var step in _instructionSteps) {
+      (step['text'] as TextEditingController).dispose();
+    }
     _servingsController.dispose();
     super.dispose();
   }
@@ -92,6 +133,55 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
     });
   }
 
+  void _addInstructionStep() {
+    if (_instructionSteps.length < 20) {
+      setState(() {
+        _instructionSteps.add({
+          'text': TextEditingController(),
+          'existingImage': null,
+          'image': null,
+        });
+      });
+    }
+  }
+
+  void _removeInstructionStep(int index) {
+    setState(() {
+      (_instructionSteps[index]['text'] as TextEditingController).dispose();
+      _instructionSteps.removeAt(index);
+    });
+  }
+
+  Future<void> _pickImageForInstruction(int index) async {
+    try {
+      final XFile? image = await _picker.pickImage(imageQuality: 80, source: ImageSource.gallery);
+      if (image != null) {
+        setState(() {
+          _instructionSteps[index]['image'] = image;
+          _instructionSteps[index]['existingImage'] = null; // Replace existing image if any
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al seleccionar imagen: $e')),
+        );
+      }
+    }
+  }
+
+  void _removeImageForInstruction(int index) {
+    setState(() {
+      _instructionSteps[index]['image'] = null;
+    });
+  }
+
+  void _removeExistingImageForInstruction(int index) {
+    setState(() {
+      _instructionSteps[index]['existingImage'] = null;
+    });
+  }
+
   Future<void> _submit() async {
     if (widget.recipe.editCount >= 3) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -117,13 +207,46 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
           .where((e) => e.isNotEmpty)
           .toList();
 
-      final instructions = _instructionsController.text
-          .split('\n')
-          .map((e) => e.trim())
-          .where((e) => e.isNotEmpty)
-          .toList();
-
       if (ingredients.isEmpty) throw Exception('Debes agregar al menos un ingrediente.');
+      
+      final List<String> instructions = [];
+      for (int i = 0; i < _instructionSteps.length; i++) {
+        final step = _instructionSteps[i];
+        final text = (step['text'] as TextEditingController).text.trim();
+        if (text.isNotEmpty) {
+          String? stepImageUrl = step['existingImage'];
+          final XFile? stepImage = step['image'] as XFile?;
+          
+          if (stepImage != null) {
+            final storage = Supabase.instance.client.storage.from('recipe_images');
+            final fileName = '${DateTime.now().millisecondsSinceEpoch}_step_${i}_${stepImage.name}';
+            final filePath = '$userId/$fileName';
+            
+            if (kIsWeb) {
+              final bytes = await stepImage.readAsBytes();
+              await storage.uploadBinary(
+                filePath,
+                bytes,
+                fileOptions: FileOptions(cacheControl: '3600', upsert: false, contentType: stepImage.mimeType ?? 'image/jpeg'),
+              );
+            } else {
+              await storage.upload(
+                filePath,
+                File(stepImage.path),
+                fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
+              );
+            }
+            stepImageUrl = storage.getPublicUrl(filePath);
+          }
+          
+          final jsonString = jsonEncode({
+            'text': text,
+            if (stepImageUrl != null) 'imageUrl': stepImageUrl,
+          });
+          instructions.add(jsonString);
+        }
+      }
+
       if (instructions.isEmpty) throw Exception('Debes agregar al menos un paso de instrucción.');
 
       List<String> finalMediaUrls = List.from(_existingImageUrls);
@@ -136,11 +259,20 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
           final fileName = '${DateTime.now().millisecondsSinceEpoch}_${image.name}';
           final filePath = '$userId/$fileName';
           
-          await storage.upload(
-            filePath,
-            File(image.path),
-            fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
-          );
+          if (kIsWeb) {
+            final bytes = await image.readAsBytes();
+            await storage.uploadBinary(
+              filePath,
+              bytes,
+              fileOptions: FileOptions(cacheControl: '3600', upsert: false, contentType: image.mimeType ?? 'image/jpeg'),
+            );
+          } else {
+            await storage.upload(
+              filePath,
+              File(image.path),
+              fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
+            );
+          }
           
           final publicUrl = storage.getPublicUrl(filePath);
           finalMediaUrls.add(publicUrl);
@@ -163,7 +295,7 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
 
       // Refrescar vistas
       // ignore: unused_result
-      ref.refresh(feedRecipesProvider);
+      ref.refresh(filteredFeedRecipesProvider);
       // ignore: unused_result
       ref.refresh(userRecipesProvider);
 
@@ -301,7 +433,9 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
                               image: DecorationImage(
-                                image: FileImage(File(_newSelectedImages[i].path)),
+                                image: kIsWeb
+                                    ? NetworkImage(_newSelectedImages[i].path) as ImageProvider
+                                    : FileImage(File(_newSelectedImages[i].path)),
                                 fit: BoxFit.cover,
                               ),
                             ),
@@ -395,18 +529,126 @@ class _EditRecipeScreenState extends ConsumerState<EditRecipeScreen> {
             Text('Instrucciones *', style: theme.textTheme.titleLarge),
             const SizedBox(height: 4),
             Text(
-              'Escribe cada paso en una línea separada',
+              'Edita paso a paso. Puedes incluir una imagen opcional en cada uno (Máx. 20 pasos).',
               style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
             ),
             const SizedBox(height: 8),
-            _buildTextField(
-              controller: _instructionsController,
-              label: 'Ej:\nMezclar harina con agua\nAmasar por 10 minutos',
-              theme: theme,
-              maxLines: 8,
-              enabled: !isLimitReached,
-              validator: (val) => val == null || val.isEmpty ? 'Debes agregar las instrucciones' : null,
+            
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _instructionSteps.length,
+              itemBuilder: (context, index) {
+                final step = _instructionSteps[index];
+                final textController = step['text'] as TextEditingController;
+                final existingImage = step['existingImage'] as String?;
+                final image = step['image'] as XFile?;
+
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  elevation: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Paso ${index + 1}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            if (!isLimitReached)
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                                onPressed: () => _removeInstructionStep(index),
+                                tooltip: 'Eliminar paso',
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: textController,
+                          maxLines: 4,
+                          enabled: !isLimitReached,
+                          validator: (val) => val == null || val.trim().isEmpty ? 'El paso no puede estar vacío' : null,
+                          decoration: InputDecoration(
+                            labelText: 'Describe este paso...',
+                            border: const OutlineInputBorder(),
+                            alignLabelWithHint: true,
+                            suffixIcon: !isLimitReached ? IconButton(
+                              icon: const Icon(Icons.mic),
+                              onPressed: () => _startListening(textController),
+                              tooltip: 'Dictar paso',
+                            ) : null,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        if (existingImage != null || image != null)
+                          Stack(
+                            children: [
+                              Container(
+                                height: 150,
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  image: DecorationImage(
+                                    image: image != null
+                                        ? (kIsWeb
+                                            ? NetworkImage(image.path) as ImageProvider
+                                            : FileImage(File(image.path)))
+                                        : CachedNetworkImageProvider(existingImage!),
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                              if (!isLimitReached)
+                                Positioned(
+                                  top: 8,
+                                  right: 8,
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      if (image != null) {
+                                        _removeImageForInstruction(index);
+                                      } else {
+                                        _removeExistingImageForInstruction(index);
+                                      }
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.black54,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(Icons.close, color: Colors.white, size: 20),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          )
+                        else if (!isLimitReached)
+                          OutlinedButton.icon(
+                            onPressed: () => _pickImageForInstruction(index),
+                            icon: const Icon(Icons.add_photo_alternate),
+                            label: const Text('Agregar imagen (opcional)'),
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
+
+            if (!isLimitReached && _instructionSteps.length < 20)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: OutlinedButton.icon(
+                  onPressed: _addInstructionStep,
+                  icon: const Icon(Icons.add),
+                  label: const Text('+ Añadir otro paso', style: TextStyle(fontSize: 16)),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                ),
+              ),
             const SizedBox(height: 32),
             if (_isLoading)
               const Center(child: CircularProgressIndicator())

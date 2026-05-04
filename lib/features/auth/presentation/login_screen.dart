@@ -111,6 +111,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    
+    // Colores para accesibilidad +50
+    final inputFillColor = isDark ? Colors.grey.shade900 : Colors.white;
+    final inputBorderColor = isDark ? Colors.grey.shade600 : Colors.grey.shade400;
 
     return Scaffold(
       body: Container(
@@ -135,8 +139,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: Container(
                     decoration: BoxDecoration(
                       color: isDark
-                          ? theme.colorScheme.surface.withOpacity(0.4)
-                          : Colors.white.withOpacity(0.4),
+                          ? theme.colorScheme.surface.withOpacity(0.9)
+                          : Colors.white.withOpacity(0.95),
                       borderRadius: BorderRadius.circular(32),
                       border: Border.all(
                         color: Colors.white.withOpacity(0.3),
@@ -145,7 +149,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 32.0, vertical: 40.0),
+                          horizontal: 24.0, vertical: 40.0),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -157,6 +161,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             style: theme.textTheme.headlineLarge?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: isDark ? Colors.white : Colors.black87,
+                              fontSize: 34,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -164,7 +169,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             'Gastronomía a la Chilena',
                             textAlign: TextAlign.center,
                             style: theme.textTheme.titleMedium?.copyWith(
-                              color: Colors.grey.shade600,
+                              color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                           const SizedBox(height: 40),
@@ -173,12 +180,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           if (_isRegistering) ...[
                             TextField(
                               controller: _nameController,
-                              style: theme.textTheme.bodyLarge,
+                              style: theme.textTheme.bodyLarge?.copyWith(fontSize: 18),
                               decoration: InputDecoration(
                                 labelText: 'Nombre',
-                                prefixIcon: const Icon(Icons.person_outline),
+                                labelStyle: const TextStyle(fontSize: 18),
+                                prefixIcon: const Icon(Icons.person_outline, size: 28),
+                                filled: true,
+                                fillColor: inputFillColor,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide(color: inputBorderColor, width: 2),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide(color: inputBorderColor, width: 1.5),
                                 ),
                                 contentPadding: const EdgeInsets.all(20),
                               ),
@@ -186,12 +201,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             const SizedBox(height: 20),
                             TextField(
                               controller: _lastNameController,
-                              style: theme.textTheme.bodyLarge,
+                              style: theme.textTheme.bodyLarge?.copyWith(fontSize: 18),
                               decoration: InputDecoration(
                                 labelText: 'Apellido',
-                                prefixIcon: const Icon(Icons.person_outline),
+                                labelStyle: const TextStyle(fontSize: 18),
+                                prefixIcon: const Icon(Icons.person_outline, size: 28),
+                                filled: true,
+                                fillColor: inputFillColor,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide(color: inputBorderColor, width: 2),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide(color: inputBorderColor, width: 1.5),
                                 ),
                                 contentPadding: const EdgeInsets.all(20),
                               ),
@@ -201,12 +224,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           TextField(
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
-                            style: theme.textTheme.bodyLarge,
+                            style: theme.textTheme.bodyLarge?.copyWith(fontSize: 18),
                             decoration: InputDecoration(
                               labelText: 'Correo Electrónico',
-                              prefixIcon: const Icon(Icons.email_outlined),
+                              labelStyle: const TextStyle(fontSize: 18),
+                              prefixIcon: const Icon(Icons.email_outlined, size: 28),
+                              filled: true,
+                              fillColor: inputFillColor,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(16),
+                                borderSide: BorderSide(color: inputBorderColor, width: 2),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: BorderSide(color: inputBorderColor, width: 1.5),
                               ),
                               contentPadding: const EdgeInsets.all(20),
                             ),
@@ -215,12 +246,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           TextField(
                             controller: _passwordController,
                             obscureText: true,
-                            style: theme.textTheme.bodyLarge,
+                            style: theme.textTheme.bodyLarge?.copyWith(fontSize: 18),
                             decoration: InputDecoration(
                               labelText: 'Contraseña',
-                              prefixIcon: const Icon(Icons.lock_outline),
+                              labelStyle: const TextStyle(fontSize: 18),
+                              prefixIcon: const Icon(Icons.lock_outline, size: 28),
+                              filled: true,
+                              fillColor: inputFillColor,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(16),
+                                borderSide: BorderSide(color: inputBorderColor, width: 2),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: BorderSide(color: inputBorderColor, width: 1.5),
                               ),
                               contentPadding: const EdgeInsets.all(20),
                             ),
@@ -238,8 +277,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.red.shade700,
                                     foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 20),
+                                    minimumSize: const Size(double.infinity, 60),
+                                    padding: const EdgeInsets.symmetric(vertical: 20),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(16),
                                     ),
@@ -248,7 +287,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   child: Text(
                                     _isRegistering ? 'REGISTRARSE' : 'INGRESAR',
                                     style: const TextStyle(
-                                        fontSize: 18,
+                                        fontSize: 20,
                                         fontWeight: FontWeight.bold,
                                         letterSpacing: 1.2),
                                   ),
@@ -256,17 +295,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 const SizedBox(height: 20),
                                 OutlinedButton(
                                   onPressed: () {
-                                    setState(
-                                        () => _isRegistering = !_isRegistering);
+                                    setState(() => _isRegistering = !_isRegistering);
                                   },
                                   style: OutlinedButton.styleFrom(
-                                    minimumSize:
-                                        const Size(double.infinity, 56),
+                                    minimumSize: const Size(double.infinity, 60),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(16),
                                     ),
-                                    side: BorderSide(
-                                        color: Colors.red.shade300, width: 2),
+                                    side: BorderSide(color: Colors.red.shade600, width: 2.5),
+                                    backgroundColor: isDark ? Colors.black.withOpacity(0.5) : Colors.white.withOpacity(0.5),
                                   ),
                                   child: Text(
                                     _isRegistering
@@ -274,89 +311,82 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         : '¿No tienes cuenta? Regístrate',
                                     style: theme.textTheme.labelLarge?.copyWith(
                                       color: Colors.red.shade700,
-                                      fontWeight: FontWeight.bold,
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 18,
                                     ),
                                   ),
                                 ),
                                 if (!_isRegistering) ...[
-                                  const SizedBox(height: 16),
+                                  const SizedBox(height: 24),
                                   TextButton(
                                     onPressed: _resetPassword,
                                     style: TextButton.styleFrom(
-                                      minimumSize:
-                                          const Size(double.infinity, 56),
+                                      minimumSize: const Size(double.infinity, 60),
+                                      backgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
                                     ),
                                     child: Text(
                                       'Olvidé mi contraseña',
-                                      style:
-                                          theme.textTheme.labelLarge?.copyWith(
+                                      style: theme.textTheme.labelLarge?.copyWith(
                                         decoration: TextDecoration.underline,
-                                        color: Colors.grey.shade700,
+                                        color: isDark ? Colors.blue.shade300 : Colors.blue.shade700,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18,
                                       ),
                                     ),
                                   ),
                                 ],
-                                const SizedBox(height: 24),
+                                const SizedBox(height: 28),
                                 Row(
                                   children: [
-                                    const Expanded(
-                                        child: Divider(thickness: 1.5)),
+                                    const Expanded(child: Divider(thickness: 1.5)),
                                     Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 16),
-                                      child: Text('O',
-                                          style: TextStyle(
-                                              color: Colors.grey.shade600)),
+                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                      child: Text('O', style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade700, fontSize: 16, fontWeight: FontWeight.bold)),
                                     ),
-                                    const Expanded(
-                                        child: Divider(thickness: 1.5)),
+                                    const Expanded(child: Divider(thickness: 1.5)),
                                   ],
                                 ),
                                 const SizedBox(height: 24),
                                 ElevatedButton.icon(
-                                  icon:
-                                      const Icon(Icons.g_mobiledata, size: 32),
+                                  icon: const Icon(Icons.g_mobiledata, size: 36),
                                   label: const Text('Entrar con Google',
                                       style: TextStyle(
-                                          fontSize: 16,
+                                          fontSize: 18,
                                           fontWeight: FontWeight.bold)),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: isDark
-                                        ? Colors.grey.shade800
-                                        : Colors.white,
-                                    foregroundColor:
-                                        isDark ? Colors.white : Colors.black87,
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 16),
+                                    backgroundColor: isDark ? Colors.grey.shade800 : Colors.white,
+                                    foregroundColor: isDark ? Colors.white : Colors.black87,
+                                    minimumSize: const Size(double.infinity, 60),
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(16),
+                                      side: BorderSide(color: Colors.grey.shade300),
                                     ),
                                     elevation: 2,
                                   ),
-                                  onPressed: () => ref
-                                      .read(authRepositoryProvider)
-                                      .signInWithGoogle(),
+                                  onPressed: () => ref.read(authRepositoryProvider).signInWithGoogle(),
                                 ),
                                 const SizedBox(height: 16),
                                 ElevatedButton.icon(
-                                  icon: const Icon(Icons.facebook, size: 28),
+                                  icon: const Icon(Icons.facebook, size: 32),
                                   label: const Text('Entrar con Facebook',
                                       style: TextStyle(
-                                          fontSize: 16,
+                                          fontSize: 18,
                                           fontWeight: FontWeight.bold)),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF1877F2),
                                     foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 16),
+                                    minimumSize: const Size(double.infinity, 60),
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(16),
                                     ),
                                     elevation: 2,
                                   ),
-                                  onPressed: () => ref
-                                      .read(authRepositoryProvider)
-                                      .signInWithFacebook(),
+                                  onPressed: () => ref.read(authRepositoryProvider).signInWithFacebook(),
                                 ),
                               ],
                             ),

@@ -133,4 +133,28 @@ class SocialRepository {
       rethrow;
     }
   }
+
+  // ==== RANKINGS ====
+
+  /// Obtiene las recetas mejor calificadas
+  Future<List<Map<String, dynamic>>> getTopRatedRecipes() async {
+    try {
+      final response = await _supabase.rpc('get_top_rated_recipes');
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      print('Error en getTopRatedRecipes: $e');
+      return [];
+    }
+  }
+
+  /// Obtiene los usuarios con más recetas creadas
+  Future<List<Map<String, dynamic>>> getTopContributors() async {
+    try {
+      final response = await _supabase.rpc('get_top_contributors');
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      print('Error en getTopContributors: $e');
+      return [];
+    }
+  }
 }

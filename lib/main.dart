@@ -58,6 +58,7 @@ class AuthWrapper extends ConsumerWidget {
     
     return authState.when(
       data: (state) {
+        debugPrint('Auth state changed: ${state.event}, session: ${state.session != null}');
         final session = state.session;
         if (session != null) {
           // Usuario autenticado.
@@ -67,12 +68,18 @@ class AuthWrapper extends ConsumerWidget {
           return const LoginScreen();
         }
       },
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
-      error: (error, stack) => Scaffold(
-        body: Center(child: Text('Error: $error')),
-      ),
+      loading: () {
+        debugPrint('Auth state loading...');
+        return const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        );
+      },
+      error: (error, stack) {
+        debugPrint('Auth state error: $error');
+        return Scaffold(
+          body: Center(child: Text('Error: $error')),
+        );
+      },
     );
   }
 }

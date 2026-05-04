@@ -5,6 +5,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:gastronomia_chilena/features/recipes/domain/recipe.dart';
 import 'package:gastronomia_chilena/features/recipes/presentation/recipe_provider.dart';
 import 'package:gastronomia_chilena/features/recipes/presentation/edit_recipe_screen.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'social_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -22,11 +23,14 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
   late FlutterTts _flutterTts;
   bool _isPlayingTts = false;
   bool _isSubmittingComment = false;
+  int _currentImageIndex = 0;
+  late List<bool> _ingredientChecked;
 
   @override
   void initState() {
     super.initState();
     _initTts();
+    _ingredientChecked = List<bool>.filled(widget.recipe.ingredients.length, false);
   }
 
   void _initTts() {
@@ -70,8 +74,9 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
       }
       
       ttsText.writeln("Preparación.");
-      for (int i = 0; i < recipe.instructions.length; i++) {
-        ttsText.writeln("Paso ${i + 1}. ${recipe.instructions[i]}");
+      final steps = recipe.parsedInstructions;
+      for (int i = 0; i < steps.length; i++) {
+        ttsText.writeln("Paso ${i + 1}. ${steps[i].text}");
       }
       
       await _flutterTts.speak(ttsText.toString());
@@ -235,22 +240,65 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
         padding: const EdgeInsets.all(16.0),
         children: [
           // Imagen de Portada
-          Container(
-            height: 250,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(16),
-              image: (recipe.mediaUrls != null && recipe.mediaUrls!.isNotEmpty)
-                  ? DecorationImage(
-                      image: NetworkImage(recipe.mediaUrls!.first),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
+          if (recipe.mediaUrls == null || recipe.mediaUrls!.isEmpty)
+            Container(
+              height: 250,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Center(child: Icon(Icons.image, size: 64, color: Colors.grey)),
+            )
+          else
+            SizedBox(
+              height: 250,
+              child: Stack(
+                children: [
+                  PageView.builder(
+                    itemCount: recipe.mediaUrls!.length,
+                    onPageChanged: (index) {
+                      setState(() {
+                        _currentImageIndex = index;
+                      });
+                    },
+                    itemBuilder: (context, index) {
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(16),
+                          image: DecorationImage(
+                            image: NetworkImage(recipe.mediaUrls![index]),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  if (recipe.mediaUrls!.length > 1)
+                    Positioned(
+                      bottom: 8,
+                      left: 0,
+                      right: 0,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(recipe.mediaUrls!.length, (index) {
+                          return Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _currentImageIndex == index
+                                  ? theme.colorScheme.primary
+                                  : Colors.white.withOpacity(0.5),
+                            ),
+                          );
+                        }),
+                      ),
+                    ),
+                ],
+              ),
             ),
-            child: (recipe.mediaUrls == null || recipe.mediaUrls!.isEmpty)
-                ? const Center(child: Icon(Icons.image, size: 64, color: Colors.grey))
-                : null,
-          ),
           const SizedBox(height: 24),
           
           // Título y Categoría
@@ -315,16 +363,20 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
           ),
           const SizedBox(height: 24),
           
-          // Botón de lectura de voz
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size(double.infinity, 64),
-              backgroundColor: _isPlayingTts ? Colors.red.shade100 : theme.colorScheme.primaryContainer,
-              foregroundColor: _isPlayingTts ? Colors.red : theme.colorScheme.onPrimaryContainer,
-            ),
-            icon: Icon(_isPlayingTts ? Icons.stop_circle : Icons.volume_up, size: 36),
-            label: Text(_isPlayingTts ? 'Detener Lectura' : 'Escuchar Receta', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            onPressed: _toggleTts,
+          // Botones de Acción Principales
+          Column(
+            children: [
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 64),
+                  backgroundColor: _isPlayingTts ? Colors.red.shade100 : theme.colorScheme.primaryContainer,
+                  foregroundColor: _isPlayingTts ? Colors.red : theme.colorScheme.onPrimaryContainer,
+                ),
+                icon: Icon(_isPlayingTts ? Icons.stop_circle : Icons.volume_up, size: 36),
+                label: Text(_isPlayingTts ? 'Detener Lectura' : 'Escuchar Receta', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                onPressed: _toggleTts,
+              ),
+            ],
           ),
           const SizedBox(height: 32),
           
@@ -340,44 +392,91 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: recipe.ingredients.map((ingredient) => Padding(
-                padding: const EdgeInsets.only(bottom: 12.0),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('• ', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.orange)),
-                    Expanded(child: Text(ingredient, style: const TextStyle(fontSize: 18))),
-                  ],
-                ),
-              )).toList(),
+              children: List.generate(recipe.ingredients.length, (index) {
+                final ingredient = recipe.ingredients[index];
+                final isChecked = _ingredientChecked[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: CheckboxListTile(
+                    value: isChecked,
+                    onChanged: (bool? value) {
+                      setState(() {
+                        _ingredientChecked[index] = value ?? false;
+                      });
+                    },
+                    title: Text(
+                      ingredient,
+                      style: TextStyle(
+                        fontSize: 18,
+                        decoration: isChecked ? TextDecoration.lineThrough : null,
+                        color: isChecked ? Colors.grey : Colors.black87,
+                      ),
+                    ),
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                    activeColor: Colors.orange,
+                  ),
+                );
+              }),
             ),
           ),
           const SizedBox(height: 32),
           
           // Preparación
           Text('Preparación', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: List.generate(recipe.instructions.length, (index) {
+            children: List.generate(recipe.parsedInstructions.length, (index) {
+              final step = recipe.parsedInstructions[index];
               return Padding(
                 padding: const EdgeInsets.only(bottom: 24.0),
-                child: Row(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CircleAvatar(
-                      backgroundColor: theme.colorScheme.primary,
-                      foregroundColor: Colors.white,
-                      radius: 18,
-                      child: Text('${index + 1}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: theme.colorScheme.primary,
+                          foregroundColor: Colors.white,
+                          radius: 18,
+                          child: Text('${index + 1}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Text(
+                            step.text,
+                            style: const TextStyle(fontSize: 18, height: 1.5),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        recipe.instructions[index],
-                        style: const TextStyle(fontSize: 18, height: 1.5),
+                    if (step.imageUrl != null) ...[
+                      const SizedBox(height: 12),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 52.0),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: CachedNetworkImage(
+                            imageUrl: step.imageUrl!,
+                            width: double.infinity,
+                            height: 200,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Container(
+                              height: 200,
+                              color: Colors.grey[300],
+                              child: const Center(child: CircularProgressIndicator()),
+                            ),
+                            errorWidget: (context, url, error) => Container(
+                              height: 200,
+                              color: Colors.grey[300],
+                              child: const Icon(Icons.error),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               );

@@ -3,25 +3,26 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../recipes/presentation/feed_screen.dart';
 import '../../recipes/presentation/user_recipes_screen.dart';
 import '../../dictionary/presentation/dictionary_screen.dart';
-import '../../settings/presentation/settings_screen.dart';
+import '../../social/presentation/ranking_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../recipes/presentation/recipe_provider.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _currentIndex = 0;
   BannerAd? _bannerAd;
   bool _isBannerAdLoaded = false;
-
   final List<Widget> _screens = [
     const FeedScreen(), // Vista principal de recetas
     const DictionaryScreen(), // Categorías y A-Z
     const UserRecipesScreen(), // Mis recetas subidas
-    const SettingsScreen(), // Ajustes (Accesibilidad/Temas)
+    const RankingScreen(), // Rankings de usuarios y recetas
   ];
 
   @override
@@ -72,6 +73,11 @@ class _HomeScreenState extends State<HomeScreen> {
           NavigationBar(
             selectedIndex: _currentIndex,
             onDestinationSelected: (index) {
+              if (_currentIndex == index && index == 0) {
+                // Si presionan "Inicio" estando ya en "Inicio", reiniciamos los filtros
+                ref.read(feedCategoryProvider.notifier).state = 'Todas';
+                ref.read(feedSearchQueryProvider.notifier).state = '';
+              }
               setState(() {
                 _currentIndex = index;
               });
@@ -93,9 +99,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 label: 'Mis Recetas',
               ),
               NavigationDestination(
-                icon: Icon(Icons.settings_outlined, size: 32),
-                selectedIcon: Icon(Icons.settings, size: 32),
-                label: 'Ajustes',
+                icon: Icon(Icons.emoji_events_outlined, size: 32),
+                selectedIcon: Icon(Icons.emoji_events, size: 32),
+                label: 'Ranking',
               ),
             ],
           ),
